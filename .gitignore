@@ -7,7 +7,4 @@ venv/
 env/
 *.log
 .DS_Store
-mental_health.db
-*.pkl  # Keep your model files but ignore other pickles
-!model.pkl
-!vectorizer.pkl
+mental_health.db  # Don't commit SQLite

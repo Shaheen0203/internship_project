@@ -9,17 +9,22 @@ import re
 
 app = Flask(__name__)
 
-# Configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
+# Render.com PostgreSQL configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Get database URL from Render environment variable
 database_url = os.environ.get('DATABASE_URL')
 
 if database_url:
-    # Fix PostgreSQL URL for Railway
+    # Fix for Render PostgreSQL URL format
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print("Using PostgreSQL database from DATABASE_URL")
 else:
+    # Fallback for local development
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mental_health.db'
+    print("Using SQLite database for local development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -37,11 +42,13 @@ def load_user(user_id):
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(dashboard_bp)
 
-# Load ML model
+# Load ML model and vectorizer (keep using pickle)
 try:
     model = pickle.load(open("model.pkl", "rb"))
     vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-except:
+    print("ML model loaded successfully")
+except Exception as e:
+    print(f"Error loading model: {e}")
     model, vectorizer = None, None
 
 def clean_text(text):
@@ -52,9 +59,11 @@ def clean_text(text):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    # Redirect to dashboard if user is logged in
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
     
+    # For non-logged in users, show the original index with analysis
     prediction = ""
     if request.method == "POST" and model and vectorizer:
         text = request.form.get("text")
@@ -62,7 +71,7 @@ def index():
             cleaned = clean_text(text)
             vectorized = vectorizer.transform([cleaned])
             result = model.predict(vectorized)[0]
-            
+
             if result == 1:
                 prediction = "Positive Mental State 😊"
             elif result == 0:
@@ -72,10 +81,16 @@ def index():
     
     return render_template("index.html", prediction=prediction)
 
-# Initialize database
+# Create database tables on app startup
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("Database tables created/verified")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
 
-# Application entry point
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    # Render automatically sets PORT environment variable
+    port = int(os.environ.get('PORT', 10000))
+    print(f"Starting server on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
