@@ -9,28 +9,19 @@ import re
 
 app = Flask(__name__)
 
-# Railway PostgreSQL configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-
-# Get database URL from Railway environment variable
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 database_url = os.environ.get('DATABASE_URL')
 
 if database_url:
-    # Fix for Railway PostgreSQL URL format
+    # Fix PostgreSQL URL for Railway
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print("Using PostgreSQL database from DATABASE_URL")
 else:
-    # Fallback for local development
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mental_health.db'
-    print("Using SQLite database for local development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_recycle': 300,
-    'pool_pre_ping': True,
-}
 
 # Initialize extensions
 db.init_app(app)
@@ -46,18 +37,12 @@ def load_user(user_id):
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(dashboard_bp)
 
-# Load ML model and vectorizer
-def load_ml_model():
-    try:
-        model = pickle.load(open("model.pkl", "rb"))
-        vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-        print("ML model loaded successfully")
-        return model, vectorizer
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        return None, None
-
-model, vectorizer = load_ml_model()
+# Load ML model
+try:
+    model = pickle.load(open("model.pkl", "rb"))
+    vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+except:
+    model, vectorizer = None, None
 
 def clean_text(text):
     text = text.lower()
@@ -67,11 +52,9 @@ def clean_text(text):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Redirect to dashboard if user is logged in
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
     
-    # For non-logged in users, show the original index with analysis
     prediction = ""
     if request.method == "POST" and model and vectorizer:
         text = request.form.get("text")
@@ -79,7 +62,7 @@ def index():
             cleaned = clean_text(text)
             vectorized = vectorizer.transform([cleaned])
             result = model.predict(vectorized)[0]
-
+            
             if result == 1:
                 prediction = "Positive Mental State 😊"
             elif result == 0:
@@ -89,16 +72,10 @@ def index():
     
     return render_template("index.html", prediction=prediction)
 
-# Create database tables on app startup
+# Initialize database
 with app.app_context():
-    try:
-        db.create_all()
-        print("Database tables created/verified")
-    except Exception as e:
-        print(f"Database initialization error: {e}")
+    db.create_all()
 
+# Application entry point
 if __name__ == "__main__":
-    # Get port from Railway environment variable or use default
-    port = int(os.environ.get('PORT', 5000))
-    print(f"Starting server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
