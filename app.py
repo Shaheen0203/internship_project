@@ -42,14 +42,28 @@ def load_user(user_id):
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(dashboard_bp)
 
-# Load ML model and vectorizer (keep using pickle)
+# Load ML model and vectorizer
+model = None
+vectorizer = None
+
 try:
-    model = pickle.load(open("model.pkl", "rb"))
-    vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-    print("ML model loaded successfully")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    model, vectorizer = None, None
+    # Try to import scikit-learn
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    print("scikit-learn not available, ML features disabled")
+
+if HAS_SKLEARN:
+    try:
+        model = pickle.load(open("model.pkl", "rb"))
+        vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+        print("ML model loaded successfully")
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        model, vectorizer = None, None
+else:
+    print("ML disabled: scikit-learn not installed")
 
 def clean_text(text):
     text = text.lower()
@@ -59,11 +73,9 @@ def clean_text(text):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # Redirect to dashboard if user is logged in
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
     
-    # For non-logged in users, show the original index with analysis
     prediction = ""
     if request.method == "POST" and model and vectorizer:
         text = request.form.get("text")
@@ -78,6 +90,8 @@ def index():
                 prediction = "Neutral Mental State 😐"
             else:
                 prediction = "Negative Mental State 😔"
+    elif request.method == "POST" and not model:
+        prediction = "ML model not available"
     
     return render_template("index.html", prediction=prediction)
 
@@ -90,7 +104,6 @@ with app.app_context():
         print(f"Database initialization error: {e}")
 
 if __name__ == "__main__":
-    # Render automatically sets PORT environment variable
     port = int(os.environ.get('PORT', 10000))
     print(f"Starting server on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
