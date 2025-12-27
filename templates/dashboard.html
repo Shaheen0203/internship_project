@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Mental Health Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-100 min-h-screen p-4">
+    
+    <!-- Navigation -->
+    <div class="max-w-6xl mx-auto">
+        <nav class="flex justify-between items-center mb-8 p-4 bg-white rounded-xl shadow">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">
+                    Mental Health Dashboard
+                </h1>
+                <p class="text-gray-600 text-sm">
+                    Welcome, {{ current_user.username }}!
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('auth.logout') }}" 
+                   class="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition">
+                    Logout
+                </a>
+            </div>
+        </nav>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Analysis Form -->
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-xl shadow mb-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        Analyze New Text
+                    </h2>
+                    
+                    <form method="POST" class="space-y-4">
+                        <textarea 
+                            name="text"
+                            required
+                            placeholder="Enter social media post or text to analyze..."
+                            class="w-full h-40 p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        ></textarea>
+                        
+                        <button 
+                            type="submit"
+                            class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                        >
+                            Analyze Sentiment
+                        </button>
+                    </form>
+                    
+                    {% if prediction %}
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <h3 class="font-bold text-gray-800 mb-2">Analysis Result:</h3>
+                        <p class="text-xl font-bold text-blue-600">{{ prediction }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Analysis History -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        Recent Analyses
+                    </h2>
+                    
+                    {% if analyses %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 text-left">Date</th>
+                                    <th class="p-3 text-left">Text Preview</th>
+                                    <th class="p-3 text-left">Result</th>
+                                    <th class="p-3 text-left">Sentiment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for analysis in analyses %}
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="p-3 text-sm text-gray-600">
+                                        {{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </td>
+                                    <td class="p-3">
+                                        <div class="max-w-xs truncate" title="{{ analysis.text }}">
+                                            {{ analysis.text[:60] }}...
+                                        </div>
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="font-semibold">{{ analysis.prediction }}</span>
+                                    </td>
+                                    <td class="p-3">
+                                        {% if analysis.sentiment == 'positive' %}
+                                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                                                Positive
+                                            </span>
+                                        {% elif analysis.sentiment == 'negative' %}
+                                            <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
+                                                Negative
+                                            </span>
+                                        {% else %}
+                                            <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                                                Neutral
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <p>No analyses yet. Submit your first text above!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Right Column: Stats -->
+            <div>
+                <div class="bg-white p-6 rounded-xl shadow mb-8">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        Statistics
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                            <span class="text-gray-700">Total Analyses</span>
+                            <span class="text-xl font-bold text-blue-600">{{ analyses|length }}</span>
+                        </div>
+                        
+                        <div class="p-3 bg-green-50 rounded-lg">
+                            <h3 class="font-semibold text-gray-700 mb-2">Sentiment Distribution</h3>
+                            {% set positive = analyses|selectattr('sentiment', 'equalto', 'positive')|list %}
+                            {% set negative = analyses|selectattr('sentiment', 'equalto', 'negative')|list %}
+                            {% set neutral = analyses|selectattr('sentiment', 'equalto', 'neutral')|list %}
+                            
+                            <div class="space-y-2">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm">Positive</span>
+                                        <span class="text-sm font-semibold">{{ positive|length }}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" 
+                                             style="width: {% if analyses %}{{ (positive|length / analyses|length * 100)|round }}%{% else %}0%{% endif %}">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm">Neutral</span>
+                                        <span class="text-sm font-semibold">{{ neutral|length }}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-gray-500 h-2 rounded-full" 
+                                             style="width: {% if analyses %}{{ (neutral|length / analyses|length * 100)|round }}%{% else %}0%{% endif %}">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm">Negative</span>
+                                        <span class="text-sm font-semibold">{{ negative|length }}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-red-500 h-2 rounded-full" 
+                                             style="width: {% if analyses %}{{ (negative|length / analyses|length * 100)|round }}%{% else %}0%{% endif %}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        Quick Actions
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <a href="{{ url_for('index') }}"
+                           class="block p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-center">
+                            Back to Home
+                        </a>
+                        <button onclick="document.querySelector('textarea').value = ''" 
+                                class="block w-full p-3 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition">
+                            Clear Text
+                        </button>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <h3 class="font-bold text-gray-800 mb-2">Remember:</h3>
+                        <p class="text-sm text-gray-600">
+                            This tool is for educational purposes only and not a substitute for professional medical advice.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed top-4 right-4 w-80 z-50">
+                {% for category, message in messages %}
+                    <div class="p-4 rounded-lg mb-2 shadow-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+</body>
+</html>

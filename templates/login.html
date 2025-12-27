@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Mental Health Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen flex items-center justify-center p-4">
+    
+    <div class="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-2">
+            Login to Your Account
+        </h1>
+        
+        <p class="text-sm text-gray-600 text-center mb-6">
+            Access your analysis history and dashboard
+        </p>
+        
+        <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                    Username
+                </label>
+                <input 
+                    type="text"
+                    name="username"
+                    required
+                    placeholder="Enter your username"
+                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                    Password
+                </label>
+                <input 
+                    type="password"
+                    name="password"
+                    required
+                    placeholder="Enter your password"
+                    class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+            </div>
+            
+            <button 
+                type="submit"
+                class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+                Login
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center">
+            <p class="text-gray-600">
+                Don't have an account?
+                <a href="{{ url_for('auth.register') }}" class="text-blue-600 font-semibold hover:underline">
+                    Register here
+                </a>
+            </p>
+            <p class="mt-2">
+                <a href="{{ url_for('index') }}" class="text-gray-500 hover:text-gray-700">
+                    ← Back to Home
+                </a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="absolute top-4 right-4 w-80">
+                {% for category, message in messages %}
+                    <div class="p-3 rounded-lg mb-2 {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+</body>
+</html>
