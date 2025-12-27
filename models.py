@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    analyses = db.relationship('Analysis', backref='user', lazy=True)
+    analyses = db.relationship('Analysis', backref='user', lazy=True, cascade="all, delete-orphan")
 
 class Analysis(db.Model):
     __tablename__ = 'analyses'
@@ -22,5 +22,5 @@ class Analysis(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     prediction = db.Column(db.String(100), nullable=False)
-    sentiment = db.Column(db.String(50), nullable=False)  # positive/negative/neutral
+    sentiment = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

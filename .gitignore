@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+instance/
+.env
+venv/
+env/
+*.log
+.DS_Store
+mental_health.db  # Exclude SQLite database

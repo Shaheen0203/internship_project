@@ -30,11 +30,14 @@ def register():
             password_hash=generate_password_hash(password, method='pbkdf2:sha256')
         )
         
-        db.session.add(new_user)
-        db.session.commit()
-        
-        flash('Registration successful! Please login.', 'success')
-        return redirect(url_for('auth.login'))
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Registration failed. Please try again.', 'error')
     
     return render_template('register.html')
 
@@ -60,4 +63,4 @@ def login():
 def logout():
     logout_user()
     flash('Logged out successfully', 'success')
-    return redirect(url_for('index'))  # Changed from 'main.index' to 'index'
+    return redirect(url_for('index'))

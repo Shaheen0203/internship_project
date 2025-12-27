@@ -12,7 +12,7 @@ try:
     model = pickle.load(open("model.pkl", "rb"))
     vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 except FileNotFoundError:
-    print("Warning: Model files not found. Please run train_model.py first.")
+    print("Warning: Model files not found.")
     model = None
     vectorizer = None
 
@@ -44,19 +44,23 @@ def dashboard():
                 prediction = "Negative Mental State 😔"
                 sentiment = "negative"
             
-            # Save analysis to database
+            # Save analysis to PostgreSQL database
             analysis = Analysis(
                 user_id=current_user.id,
-                text=text[:500],  # Store first 500 chars
+                text=text[:500],
                 prediction=prediction,
                 sentiment=sentiment
             )
-            db.session.add(analysis)
-            db.session.commit()
+            try:
+                db.session.add(analysis)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                flash('Failed to save analysis. Please try again.', 'error')
         elif not model or not vectorizer:
             flash("ML model not loaded. Please check if model.pkl and vectorizer.pkl exist.", "error")
     
-    # Get user's analysis history
+    # Get user's analysis history from PostgreSQL
     analyses = Analysis.query.filter_by(user_id=current_user.id)\
         .order_by(Analysis.created_at.desc())\
         .limit(20)\

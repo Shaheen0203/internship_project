@@ -9,16 +9,20 @@ import re
 
 app = Flask(__name__)
 
-# PythonAnywhere-specific configuration
-if __name__ == '__main__':
-    # Local development
-    app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mental_health.db'
+# Railway PostgreSQL configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Get database URL from Railway environment variable
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Fix for Railway PostgreSQL URL format
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    # PythonAnywhere production
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-    # Use absolute path for SQLite on PythonAnywhere
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/yourusername/mysite/mental_health.db'
+    # Fallback for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mental_health.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -78,9 +82,12 @@ def index():
     
     return render_template("index.html", prediction=prediction)
 
-# Create tables within app context
+# Create database tables on app startup
 with app.app_context():
     db.create_all()
+    print("Database tables created/verified")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Get port from Railway environment variable or use default
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
